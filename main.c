@@ -1,4 +1,6 @@
 #include "render.h"
+#include "input.h"
+
 int main() {
   XEvent event;
   init_rendering();
@@ -10,6 +12,7 @@ int main() {
       break;
     case KeyPress:
       handle_key_event(&event.xkey);
+      render_screen(); 
       break;
     }
   }

@@ -4,7 +4,7 @@ LDFLAGS = -lX11
 
 SRC = main.c render.c input.c ansi.c terminal.c
 OBJ = $(SRC:.c=.o)
-EXEC = terminal
+EXEC = mt
 
 $(EXEC): $(OBJ)
 	$(CC) $(OBJ) -o $(EXEC) $(LDFLAGS)

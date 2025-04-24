@@ -1,6 +1,7 @@
 #include "render.h"
 #include "ansi.h"
 #include "terminal.h"
+#include "input.h"
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <stdio.h>
@@ -12,9 +13,6 @@ Display *display;
 Window window;
 GC gc;
 static XFontStruct *font;
-
-static char input_buffer[1024];
-static int input_pos = 0;
 
 static unsigned long x_colors[8] = {COLOR_BLACK,  COLOR_RED,  COLOR_GREEN,
                                     COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA,
@@ -48,6 +46,7 @@ void init_rendering() {
   XSetFont(display, gc, font->fid);
 
   init_terminal(TERM_ROWS, TERM_COLS);
+  init_input();
 }
 
 void render_cleanup() {
@@ -55,6 +54,7 @@ void render_cleanup() {
   XFreeGC(display, gc);
   XCloseDisplay(display);
   terminal_cleanup();
+  input_cleanup();
 }
 
 void render_screen() {
@@ -85,41 +85,5 @@ void render_screen() {
 }
 
 void handle_key_event(XKeyEvent *event) {
-  KeySym keysym;
-  char buffer[20];
-  int count;
-
-  count = XLookupString(event, buffer, sizeof(buffer), &keysym, NULL);
-
-  if (count > 0) {
-    if (keysym == XK_Return) {
-      terminal_write("\n");
-      input_buffer[input_pos] = '\0';
-
-      if (input_pos > 0) {
-        terminal_execute_command(input_buffer);
-      } else {
-        terminal_write("$ ");
-      }
-
-      input_pos = 0;
-    } else if (keysym == XK_BackSpace) {
-      if (input_pos > 0) {
-        input_pos--;
-        int row = get_cursor_row();
-        int col = get_cursor_col();
-        if (col > 0) {
-          terminal_move_cursor(row, col - 1);
-          terminal_write(" ");
-          terminal_move_cursor(row, col - 1);
-        }
-      }
-    } else {
-      if (input_pos < sizeof(input_buffer) - 1) {
-        input_buffer[input_pos++] = buffer[0];
-        char text[2] = {buffer[0], '\0'};
-        terminal_write(text);
-      }
-    }
-  }
+  handle_input(event);
 }
