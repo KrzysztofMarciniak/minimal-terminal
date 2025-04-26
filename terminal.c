@@ -91,6 +91,15 @@ void resize_terminal(int new_rows, int new_cols) {
     cursor_col = term_cols - 1;
 }
 
+void terminal_clear() {
+  for (int i = 0; i < term_rows; i++) {
+    memset(buffer[i], ' ', term_cols);
+  }
+  cursor_row = 0;
+  cursor_col = 0;
+  terminal_write(prompt);
+}
+
 void terminal_write(const char *text) {
   int i = 0;
   while (text[i] != '\0') {
@@ -124,6 +133,9 @@ void terminal_write(const char *text) {
       i++;
     } else if (text[i] == '\r') {
       cursor_col = 0;
+      i++;
+    } else if (text[i] == 12) { 
+      terminal_clear();
       i++;
     } else {
       if (cursor_col < term_cols) {

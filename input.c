@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+
 extern Display *display;
 extern Window window;
 extern GC gc;
@@ -34,7 +35,10 @@ void handle_input(XKeyEvent *event) {
         if (strcmp(input_buffer, "exit") == 0) {
           input_cleanup();
           exit(0);
-        } else {
+        } else if (strcmp(input_buffer, "clear") == 0) {
+            terminal_clear();
+        }
+        else {
           terminal_execute_command(input_buffer);
         }
       } else {

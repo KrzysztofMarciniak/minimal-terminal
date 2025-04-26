@@ -202,3 +202,4 @@ void render_cleanup() {
   terminal_cleanup();
   input_cleanup();
 }
+

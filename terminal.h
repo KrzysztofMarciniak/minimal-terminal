@@ -18,5 +18,6 @@ void terminal_cleanup();
 void terminal_set_prompt(const char* prompt);
 const char* terminal_get_prompt();
 void resize_terminal(int new_rows, int new_cols);
+void terminal_clear();
 
 #endif // TERMINAL_H
