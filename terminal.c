@@ -14,20 +14,22 @@ static char* prompt = NULL;
 void init_terminal(int rows, int cols) {
     term_rows = rows;
     term_cols = cols;
-    buffer = (char**)malloc(rows * sizeof(char*));
-    for (int i = 0; i < rows; i++) {
-        buffer[i] = (char*)malloc(cols + 1); 
-        memset(buffer[i], ' ', cols);
-        buffer[i][cols] = '\0';
+    
+    buffer = (char**)malloc(term_rows * sizeof(char*));
+    for (int i = 0; i < term_rows; i++) {
+        buffer[i] = (char*)malloc(term_cols + 1); 
+        memset(buffer[i], ' ', term_cols);
+        buffer[i][term_cols] = '\0';
     }
     cursor_row = 0;
     cursor_col = 0;
-        const char* ps1 = getenv("PS1");
-        if (ps1) {
-            terminal_set_prompt(ps1);
-        } else {
-            terminal_set_prompt("$ ");
-        }
+    
+    const char* ps1 = getenv("PS1");
+    if (ps1) {
+        terminal_set_prompt(ps1);
+    } else {
+        terminal_set_prompt("$ ");
+    }
     
     terminal_write(prompt);
 }
@@ -63,6 +65,35 @@ int get_terminal_rows() {
 
 int get_terminal_cols() {
     return term_cols;
+}
+void resize_terminal(int new_rows, int new_cols) {
+    if (new_rows == term_rows && new_cols == term_cols) return;
+
+    char** new_buffer = (char**)malloc(new_rows * sizeof(char*));
+    for (int i = 0; i < new_rows; i++) {
+        new_buffer[i] = (char*)malloc(new_cols + 1);
+        memset(new_buffer[i], ' ', new_cols);
+        new_buffer[i][new_cols] = '\0';
+    }
+
+    int min_rows = (new_rows < term_rows) ? new_rows : term_rows;
+    int min_cols = (new_cols < term_cols) ? new_cols : term_cols;
+
+    for (int i = 0; i < min_rows; i++) {
+        memcpy(new_buffer[i], buffer[i], min_cols);
+    }
+
+    for (int i = 0; i < term_rows; i++) {
+        free(buffer[i]);
+    }
+    free(buffer);
+
+    buffer = new_buffer;
+    term_rows = new_rows;
+    term_cols = new_cols;
+
+    if (cursor_row >= term_rows) cursor_row = term_rows - 1;
+    if (cursor_col >= term_cols) cursor_col = term_cols - 1;
 }
 
 void terminal_write(const char* text) {

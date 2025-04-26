@@ -3,9 +3,6 @@
 
 #include <X11/Xlib.h>
 
-#define CHAR_WIDTH 8
-#define CHAR_HEIGHT 16
-
 #define COLOR_BLACK   0x000000
 #define COLOR_RED     0xFF0000
 #define COLOR_GREEN   0x00FF00
