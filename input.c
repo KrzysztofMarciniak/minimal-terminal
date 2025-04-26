@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 
 extern Display *display;
@@ -36,9 +37,23 @@ void handle_input(XKeyEvent *event) {
           input_cleanup();
           exit(0);
         } else if (strcmp(input_buffer, "clear") == 0) {
-            terminal_clear();
-        }
-        else {
+          terminal_clear();
+        } else if (strncmp(input_buffer, "cd", 2) == 0) {
+          char *path = input_buffer + 2;
+          while (*path == ' ') path++;
+          if (*path == '\0') {
+            path = getenv("HOME");
+            if (!path) path = "/";
+          }
+          if (chdir(path) == 0) {
+            terminal_write("Directory changed to ");
+            terminal_write(path);
+            terminal_write("\n");
+          } else {
+            terminal_write("cd: no such file or directory: ");
+            terminal_write(path);
+            terminal_write("\n");
+          }        } else {
           terminal_execute_command(input_buffer);
         }
       } else {
