@@ -4,6 +4,7 @@
 #include <X11/keysym.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 extern Display *display;
 extern Window window;
@@ -30,7 +31,12 @@ void handle_input(XKeyEvent *event) {
       input_buffer[input_pos] = '\0';
 
       if (input_pos > 0) {
-        terminal_execute_command(input_buffer);
+        if (strcmp(input_buffer, "exit") == 0) {
+          input_cleanup();
+          exit(0);
+        } else {
+          terminal_execute_command(input_buffer);
+        }
       } else {
         terminal_write(terminal_get_prompt());
       }
