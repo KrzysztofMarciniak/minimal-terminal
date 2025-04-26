@@ -10,7 +10,7 @@ void parse_ansi(const char *seq, int *fg_color, int *bg_color, int *attr) {
 
     if (*end == 'm') {
       switch (param) {
-      case 0: 
+      case 0:
         *attr = 0;
         *fg_color = ANSI_COLOR_WHITE;
         *bg_color = ANSI_COLOR_BLACK;
