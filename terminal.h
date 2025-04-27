@@ -34,5 +34,6 @@ const char* terminal_get_prompt();
 void resize_terminal(int new_rows, int new_cols);
 void terminal_clear();
 void terminal_start_shell();
+void terminal_read_output(void);
 
 #endif // TERMINAL_H

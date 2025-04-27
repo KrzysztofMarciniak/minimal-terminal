@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "terminal.h"
 
 #define PADDING 5
 #define GRID_COLOR 0x333333
@@ -36,6 +35,7 @@ static inline int winW() {
   XGetWindowAttributes(display, window, &wa);
   return wa.width;
 }
+
 static inline int winH() {
   XWindowAttributes wa;
   XGetWindowAttributes(display, window, &wa);
@@ -45,10 +45,10 @@ static inline int winH() {
 static void ensure_resize(int newW, int newH) {
   int newCols = (newW - 2 * PADDING) / charW;
   int newRows = (newH - 2 * PADDING) / charH;
-  if (newCols < 1)
-    newCols = 1;
-  if (newRows < 1)
-    newRows = 1;
+
+  // Ensure at least one column and one row
+  newCols = (newCols < 1) ? 1 : newCols;
+  newRows = (newRows < 1) ? 1 : newRows;
 
   if (newCols != cols || newRows != rows) {
     cols = newCols;
@@ -57,6 +57,7 @@ static void ensure_resize(int newW, int newH) {
 
     if (backBuffer)
       XFreePixmap(display, backBuffer);
+
     backBuffer = XCreatePixmap(display, window, newW, newH,
                                DefaultDepth(display, DefaultScreen(display)));
   }
@@ -70,7 +71,7 @@ static void handle_signal(int signum) {
 void init_rendering() {
   display = XOpenDisplay(NULL);
   if (!display) {
-    perror("XOpenDisplay");
+    fprintf(stderr, "Error: Unable to open X display\n");
     exit(1);
   }
 
@@ -82,7 +83,7 @@ void init_rendering() {
   font = XLoadQueryFont(
       display, "-misc-fixed-medium-r-normal--13-120-75-75-c-70-iso8859-1");
   if (!font && !(font = XLoadQueryFont(display, "fixed"))) {
-    fprintf(stderr, "Unable to load any font\n");
+    fprintf(stderr, "Error: Unable to load font\n");
     exit(1);
   }
 
@@ -99,7 +100,7 @@ void init_rendering() {
                                BORDER_WIDTH, BlackPixel(display, screen),
                                BlackPixel(display, screen));
   if (!window) {
-    fprintf(stderr, "XCreateSimpleWindow failed\n");
+    fprintf(stderr, "Error: Failed to create window\n");
     exit(1);
   }
 
@@ -126,12 +127,12 @@ void init_rendering() {
 
 void render_screen() {
   int w = winW(), h = winH();
-
   ensure_resize(w, h);
 
   XSetForeground(display, gc, BlackPixel(display, DefaultScreen(display)));
   XFillRectangle(display, backBuffer, gc, 0, 0, w, h);
 
+  // Draw grid (if debugging)
   if (DEBUG_GRID) {
     XSetForeground(display, gc, GRID_COLOR);
     for (int i = 0; i <= rows; i++) {
@@ -139,11 +140,14 @@ void render_screen() {
       XDrawLine(display, backBuffer, gc, PADDING, y, PADDING + cols * charW, y);
     }
   }
+
+  // Draw terminal grid lines
   for (int j = 0; j <= cols; j++) {
     int x = PADDING + j * charW;
     XDrawLine(display, backBuffer, gc, x, PADDING, x, PADDING + rows * charH);
   }
 
+  // Draw characters from terminal buffer
   XSetForeground(display, gc, WhitePixel(display, DefaultScreen(display)));
   const char **buf = get_terminal_buffer();
   for (int r = 0; r < rows; r++) {
@@ -158,11 +162,13 @@ void render_screen() {
     }
   }
 
+  // Draw cursor
   int cr = get_cursor_row(), cc = get_cursor_col();
   XSetForeground(display, gc, colors[ANSI_COLOR_WHITE]);
   XFillRectangle(display, backBuffer, gc, PADDING + cc * charW,
                  PADDING + cr * charH + charH - 2, charW, 2);
 
+  // Copy back buffer to window
   XCopyArea(display, backBuffer, window, gc, 0, 0, w, h, 0, 0);
   XFlush(display);
 }
@@ -177,6 +183,7 @@ void process_events() {
       render_cleanup();
       exit(0);
     }
+
     switch (e.type) {
     case KeyPress:
       handle_key_event(&e.xkey);
@@ -204,4 +211,3 @@ void render_cleanup() {
   terminal_cleanup();
   input_cleanup();
 }
-

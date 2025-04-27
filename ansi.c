@@ -1,7 +1,5 @@
 #include "ansi.h"
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 void parse_ansi(const char *seq, int *fg_color, int *bg_color, int *attr) {
   if (seq[0] == '[') {
@@ -42,6 +40,9 @@ void parse_ansi(const char *seq, int *fg_color, int *bg_color, int *attr) {
       case 37:
         *fg_color = ANSI_COLOR_WHITE;
         break;
+      case 39: // Reset foreground color
+        *fg_color = ANSI_COLOR_WHITE;
+        break;
       case 40:
         *bg_color = ANSI_COLOR_BLACK;
         break;
@@ -65,6 +66,9 @@ void parse_ansi(const char *seq, int *fg_color, int *bg_color, int *attr) {
         break;
       case 47:
         *bg_color = ANSI_COLOR_WHITE;
+        break;
+      case 49: // Reset background color
+        *bg_color = ANSI_COLOR_BLACK;
         break;
       }
     }
