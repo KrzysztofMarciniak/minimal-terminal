@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -std=c17 -pthread
-LDFLAGS = -lX11
+CFLAGS = -Wall -std=c17 -pthread -std=gnu99
+LDFLAGS = -lX11 -lutil
 
 SRC = main.c render.c input.c ansi.c terminal.c
 OBJ = $(SRC:.c=.o)

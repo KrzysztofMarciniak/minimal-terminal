@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "terminal.h"
 
 #define PADDING 5
 #define GRID_COLOR 0x333333
@@ -119,6 +120,7 @@ void init_rendering() {
       XCreatePixmap(display, window, w, h, DefaultDepth(display, screen));
 
   init_terminal(rows, cols);
+  terminal_start_shell();
   init_input();
 }
 
