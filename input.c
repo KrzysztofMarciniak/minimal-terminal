@@ -19,7 +19,6 @@ void init_input() {
   input_pos = 0;
   memset(input_buffer, 0, sizeof(input_buffer));
 }
-
 void handle_input(XKeyEvent *event) {
   KeySym keysym;
   char buffer[20];
@@ -28,6 +27,12 @@ void handle_input(XKeyEvent *event) {
   count = XLookupString(event, buffer, sizeof(buffer), &keysym, NULL);
 
   if (count > 0) {
+    if (buffer[0] == 12) {
+      // Ctrl+L: ignore adding to input buffer
+      terminal_clear();
+      return;
+    }
+
     if (keysym == XK_Return) {
       terminal_write("\n");
       input_buffer[input_pos] = '\0';
@@ -46,18 +51,15 @@ void handle_input(XKeyEvent *event) {
             if (!path) path = "/";
           }
           if (chdir(path) == 0) {
-            terminal_write("Directory changed to ");
-            terminal_write(path);
-            terminal_write("\n");
+            // Successfully changed directory
           } else {
             terminal_write("cd: no such file or directory: ");
             terminal_write(path);
             terminal_write("\n");
-          }        } else {
+          }
+        } else {
           terminal_execute_command(input_buffer);
         }
-      } else {
-        terminal_write(terminal_get_prompt());
       }
 
       input_pos = 0;
@@ -81,6 +83,7 @@ void handle_input(XKeyEvent *event) {
     }
   }
 }
+
 
 void input_cleanup() {
   input_pos = 0;

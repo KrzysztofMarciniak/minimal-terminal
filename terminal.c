@@ -134,21 +134,17 @@ void terminal_write(const char *text) {
     } else if (text[i] == '\r') {
       cursor_col = 0;
       i++;
-    } else if (text[i] == 12) { 
-      terminal_clear();
-      i++;
     } else {
       if (cursor_col < term_cols) {
         buffer[cursor_row][cursor_col] = text[i];
         cursor_col++;
       }
       i++;
-
       if (cursor_col >= term_cols) {
         cursor_row++;
         cursor_col = 0;
 
-        if (cursor_row >= term_rows) {
+        if (cursor_row >= term_rows) { 
           for (int r = 0; r < term_rows - 1; r++) {
             memcpy(buffer[r], buffer[r + 1], term_cols);
           }
@@ -198,16 +194,17 @@ int get_cursor_row() { return cursor_row; }
 int get_cursor_col() { return cursor_col; }
 
 void terminal_cleanup() {
-  if (buffer) {
-    for (int i = 0; i < term_rows; i++) {
-      free(buffer[i]);
+    if (buffer) {
+      for (int i = 0; i < term_rows; i++) {
+        free(buffer[i]);  
+      }
+      free(buffer);  
+      buffer = NULL;  
     }
-    free(buffer);
-    buffer = NULL;
+  
+    if (prompt) {
+      free(prompt);
+      prompt = NULL; 
+    }
   }
-
-  if (prompt) {
-    free(prompt);
-    prompt = NULL;
-  }
-}
+  
