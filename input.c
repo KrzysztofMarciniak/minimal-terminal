@@ -2,19 +2,17 @@
 #include "terminal.h"
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
-#include <limits.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <termios.h>
 
 extern Display *display;
 extern Window window;
 extern GC gc;
-int pty_fd = -1;
+
 #define MAX_INPUT_BUFFER_SIZE 1024
+#define CTRL_L 12
 
 static char input_buffer[MAX_INPUT_BUFFER_SIZE];
 static int input_pos = 0;
@@ -26,15 +24,9 @@ typedef struct {
   CommandFunc func;
 } Command;
 
-static void cmd_exit(char *args);
 static void cmd_clear(char *args);
-static void cmd_unknown(char *input);
 
-// Command registry
-static Command commands[] = {
-    {"clear", cmd_clear},
-    {NULL, NULL}
-};
+static Command commands[] = {{"clear", cmd_clear}, {NULL, NULL}};
 
 void init_input() {
   input_pos = 0;
@@ -46,80 +38,83 @@ void input_cleanup() {
   memset(input_buffer, 0, sizeof(input_buffer));
 }
 
-static void cmd_clear(char *args) {
-  terminal_clear();
-}
-
-static void cmd_unknown(char *input) {
-  terminal_execute_command(input);
-}
+static void cmd_clear(char *args) { terminal_clear(); }
 
 static void process_command(const char *input) {
+  if (!input || !*input)
+    return;
+
   char temp[MAX_INPUT_BUFFER_SIZE];
   strncpy(temp, input, sizeof(temp) - 1);
-  temp[sizeof(temp) - 1] = '\0'; 
+  temp[sizeof(temp) - 1] = '\0';
 
   char *command = strtok(temp, " ");
   char *args = strtok(NULL, "");
 
-  if (!command) {
-    return;  
-  }
+  if (!command)
+    return;
 
   for (Command *cmd = commands; cmd->name != NULL; cmd++) {
     if (strcmp(command, cmd->name) == 0) {
-      cmd->func(args);  
+      cmd->func(args);
       return;
     }
   }
 
-  cmd_unknown((char *)input);
+  terminal_execute_command(input);
 }
+
+static int is_printable(char c) { return (c >= 32 && c <= 126); }
 
 void handle_input(XKeyEvent *event) {
   KeySym keysym;
-  char buffer[20];
+  char buffer[32];
   int count = XLookupString(event, buffer, sizeof(buffer), &keysym, NULL);
 
-  if (count <= 0) {
-    return; // No valid input detected
-  }
+  if (count <= 0)
+    return;
 
-  if (buffer[0] == 12) { // Ctrl+L
+  char c = buffer[0];
+
+  if (c == CTRL_L) { // Ctrl+L
     terminal_clear();
     return;
   }
+  if (keysym == XK_Return) { // Enter key
+    input_buffer[input_pos] = '\0';
 
-  // Handle Enter key (Execute the command)
-  if (keysym == XK_Return) {
-    terminal_write("\n");
-    input_buffer[input_pos] = '\0'; 
-
-    if (input_pos > 0) {
+    if (input_pos > 0) { 
+      terminal_write("\n");
       process_command(input_buffer);
     }
 
     input_pos = 0;
+    memset(input_buffer, 0, sizeof(input_buffer));
+    return;
   }
-  else if (keysym == XK_BackSpace) {
+
+  if (keysym == XK_BackSpace) {
     if (input_pos > 0) {
-        if (pty_fd >= 0) {
-            input_buffer[input_pos] = '\0';
-            write(pty_fd, input_buffer, strlen(input_buffer));
-            write(pty_fd, "\n", 1);
-            terminal_read_output();
-        } else {
-            process_command(input_buffer);  
-        }
+      input_pos--;
+      input_buffer[input_pos] = '\0';
+      int row = get_cursor_row();
+      int col = get_cursor_col();
+      if (col > 0) {
+        terminal_move_cursor(row, col - 1);
+        terminal_write(" ");
+        terminal_move_cursor(row, col - 1);
+      }
     }
-    
-  } else {
+    return;
+  }
+
+  if (is_printable(c)) {
     if (input_pos < MAX_INPUT_BUFFER_SIZE - 1) {
-      input_buffer[input_pos++] = buffer[0];
-      char text[2] = {buffer[0], '\0'};
+      input_buffer[input_pos++] = c;
+      char text[2] = {c, '\0'};
       terminal_write(text);
     } else {
-      fprintf(stderr, "Input buffer overflow! Ignoring further input.\n");
+      terminal_write("\a"); // Bell on overflow
     }
   }
 }

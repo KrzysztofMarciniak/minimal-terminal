@@ -11,18 +11,18 @@ static int term_rows = 0;
 static int term_cols = 0;
 static char *prompt = NULL;
 
-static void write_prompt(void) {
+void write_prompt(void) {
   if (prompt) {
     terminal_write(prompt);
   }
 }
 static void sigchld_handler(int signo) {
-    int status;
-    pid_t pid = waitpid(shell_pid, &status, WNOHANG);
-    if (pid > 0) {
-        terminal_cleanup();
-        _exit(0);
-    }
+  int status;
+  pid_t pid = waitpid(shell_pid, &status, WNOHANG);
+  if (pid > 0) {
+    terminal_cleanup();
+    _exit(0);
+  }
 }
 
 void init_terminal(int rows, int cols) {
@@ -137,6 +137,7 @@ void terminal_write(const char *text) {
   for (size_t i = 0; text[i]; ++i) {
     char c = text[i];
     if (c == '\033') {
+      // Handle ANSI escape sequences if necessary
       char seq[32] = {0};
       size_t j = 0;
       seq[j++] = c;
@@ -148,11 +149,12 @@ void terminal_write(const char *text) {
         }
       }
       seq[j] = '\0';
-      // parse_ansi
+      // Handle escape sequence parsing
     } else if (c == '\n') {
       cursor_row++;
       cursor_col = 0;
       if (cursor_row >= term_rows) {
+        // Handle scrolling behavior
         for (int r = 0; r < term_rows - 1; ++r)
           memcpy(buffer[r], buffer[r + 1], term_cols);
         memset(buffer[term_rows - 1], ' ', term_cols);
@@ -217,41 +219,40 @@ void terminal_read_output(void) {
 }
 
 void terminal_start_shell(void) {
-    if (pty_fd != -1) {
-      terminal_write("Shell already running\n");
-      write_prompt();
-      return;
-    }
-    struct winsize ws = {
-        .ws_row = term_rows, .ws_col = term_cols, .ws_xpixel = 0, .ws_ypixel = 0};
-    shell_pid = forkpty(&pty_fd, NULL, NULL, &ws);
-    if (shell_pid < 0) {
-      perror("forkpty");
-      terminal_write("Failed to start shell: ");
-      terminal_write(strerror(errno));
-      terminal_write("\n");
-      write_prompt();
-      return;
-    }
-    if (shell_pid == 0) {
-      const char *shell = getenv("SHELL");
-      if (!shell)
-        shell = "/bin/sh";
-      setenv("TERM", "xterm-256color", 1);
-      execlp(shell, shell, "-i", NULL);
-      perror("execlp");
-      _exit(EXIT_FAILURE);
-    }
-  
-    signal(SIGCHLD, sigchld_handler);
-  
-    int flags = fcntl(pty_fd, F_GETFL);
-    fcntl(pty_fd, F_SETFL, flags | O_NONBLOCK);
-    usleep(100000);
-    terminal_read_output();
+  if (pty_fd != -1) {
+    terminal_write("Shell already running\n");
     write_prompt();
+    return;
   }
-  
+  struct winsize ws = {
+      .ws_row = term_rows, .ws_col = term_cols, .ws_xpixel = 0, .ws_ypixel = 0};
+  shell_pid = forkpty(&pty_fd, NULL, NULL, &ws);
+  if (shell_pid < 0) {
+    perror("forkpty");
+    terminal_write("Failed to start shell: ");
+    terminal_write(strerror(errno));
+    terminal_write("\n");
+    write_prompt();
+    return;
+  }
+  if (shell_pid == 0) {
+    const char *shell = getenv("SHELL");
+    if (!shell)
+      shell = "/bin/sh";
+    setenv("TERM", "xterm-256color", 1);
+    execlp(shell, shell, "-i", NULL);
+    perror("execlp");
+    _exit(EXIT_FAILURE);
+  }
+
+  signal(SIGCHLD, sigchld_handler);
+
+  int flags = fcntl(pty_fd, F_GETFL);
+  fcntl(pty_fd, F_SETFL, flags | O_NONBLOCK);
+  usleep(100000);
+  terminal_read_output();
+  write_prompt();
+}
 
 void terminal_execute_command(const char *cmd) {
   if (pty_fd < 0) {

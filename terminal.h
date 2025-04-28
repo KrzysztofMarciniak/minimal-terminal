@@ -35,5 +35,5 @@ void resize_terminal(int new_rows, int new_cols);
 void terminal_clear();
 void terminal_start_shell();
 void terminal_read_output(void);
-
+void write_prompt(void);
 #endif // TERMINAL_H
